@@ -35,7 +35,7 @@ class PermissionFactory private constructor(private var weakReference: WeakRefer
     }
 
 
-    private var hasAdd = false
+    private var isAdded = false
     private val requestPermission = ArrayList<String>()
     private var fragment: PermissionFragment? = null
 
@@ -69,7 +69,7 @@ class PermissionFactory private constructor(private var weakReference: WeakRefer
             beginTransaction()
                     .add(fragment!!, fragment!!::class.java.name)
                     .commitNow()
-            hasAdd = true
+            isAdded = true
             fragment?.apply {
                 fragment?.setOnCallPermissionResult {
                     if (it == null) {
@@ -107,7 +107,7 @@ class PermissionFactory private constructor(private var weakReference: WeakRefer
         weakReference?.get()?.apply {
             fragment = PermissionFragment.get(permissions)
             beginTransaction().add(fragment!!, fragment!!::class.java.name).commitNow()
-            hasAdd = true
+            isAdded = true
             fragment?.apply {
                 fragment?.setOnCallPermissionResult {
                     result.invoke(it)
@@ -120,10 +120,10 @@ class PermissionFactory private constructor(private var weakReference: WeakRefer
     @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
     fun onDestroy() {
         requestPermission.clear()
-        if (hasAdd) {
+        if (isAdded) {
             weakReference?.get()?.beginTransaction()?.remove(fragment!!)
         }
-        hasAdd = false
+        isAdded = false
         weakActivity?.get()?.lifecycle?.removeObserver(this)
         weakReference = null
     }

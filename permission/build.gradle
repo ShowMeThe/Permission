@@ -74,8 +74,7 @@ bintray {
     key = password
     pkg {
         repo = 'Permission'
-        name = 'Permission-core'
-        version("1.0.0")
+        name = 'Permission'
         licenses = ['Apache-2.0']
         vcsUrl = 'https://github.com/ShowMeThe/Permission.git'
     }
@@ -90,7 +89,7 @@ afterEvaluate {
                 from components.release
                 groupId = 'com.github.ShowMeThe'
                 artifactId = 'permission'
-                version = '1.0.0'
+                version = '1.0.1'
             }
         }
     }
@@ -133,6 +132,3 @@ dependencies {
     compileOnly 'androidx.appcompat:appcompat:1.2.0'
 
 }
-
-apply plugin: 'com.github.dcendents.android-maven'
-group='com.github.ShowMeThe'

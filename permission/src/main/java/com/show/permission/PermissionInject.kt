@@ -12,10 +12,10 @@ import java.lang.reflect.Method
 import java.util.HashMap
 
 /**
-* PackageName : com.show.permission
-* Date: 2020/12/30
-* Author: ShowMeThe
-*/
+ * PackageName : com.show.permission
+ * Date: 2020/12/30
+ * Author: ShowMeThe
+ */
 
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.RUNTIME)
@@ -32,42 +32,41 @@ class PermissionInject {
 
 
         @JvmStatic
-        fun with(fragment: Fragment,vararg permissions:String):PermissionInject{
+        fun with(fragment: Fragment, vararg permissions: String): PermissionInject {
             mManager.inject(fragment)
             mManager.requestPermission(fragment, permissions)
             return mManager
         }
 
         @JvmStatic
-        fun with(fragment: FragmentActivity,vararg permissions:String):PermissionInject{
+        fun with(fragment: FragmentActivity, vararg permissions: String): PermissionInject {
             mManager.inject(fragment)
             mManager.requestPermission(fragment, permissions)
             return mManager
         }
 
         @JvmStatic
-        fun inject(lifecycleOwner : LifecycleOwner){
+        fun inject(lifecycleOwner: LifecycleOwner) {
             mManager.inject(lifecycleOwner)
         }
 
         @JvmStatic
-        fun inject(clazz: Class<*>){
+        fun inject(clazz: Class<*>) {
             mManager.inject(clazz)
         }
 
     }
 
 
-
-    fun requestPermission(fragment: Fragment,permissions:Array<out String>) {
-        PermissionFactory.with(fragment).requestEach(*permissions){
+    fun requestPermission(fragment: Fragment, permissions: Array<out String>) {
+        PermissionFactory.with(fragment).requestEach(*permissions) {
             pathResult(it)
         }
     }
 
 
-    fun requestPermission(activity: FragmentActivity,permissions:Array<out String>) {
-        PermissionFactory.with(activity).requestEach(*permissions){
+    fun requestPermission(activity: FragmentActivity, permissions: Array<out String>) {
+        PermissionFactory.with(activity).requestEach(*permissions) {
             pathResult(it)
         }
     }
@@ -80,7 +79,7 @@ class PermissionInject {
             val pair = entry.value
             if (pair.result) {
                 val methodResult = pair.method?.invoke(entry.key, map)
-                if (methodResult is Boolean && methodResult) {
+                if (methodResult != null && methodResult is Boolean && methodResult) {
                     pair.result = false
                 }
             }
@@ -90,7 +89,7 @@ class PermissionInject {
             val pair = entry.value
             if (pair.result) {
                 val methodResult = pair.method?.invoke(entry.key, map)
-                if ((methodResult as Boolean)) {
+                if (methodResult != null && methodResult is Boolean && methodResult) {
                     pair.result = false
                 }
             }
@@ -98,25 +97,28 @@ class PermissionInject {
     }
 
 
-
     fun inject(clazz: Class<*>): PermissionInject {
-        if(clazzKeeper.contains(clazz)) return this
-        clazzKeeper[clazz] = Pair(true, findAnoInClass(clazz::class.java))
+        if (clazzKeeper.contains(clazz)) return this
+        findAnoInClass(clazz::class.java)?.apply {
+            clazzKeeper[clazz] = Pair(true,this)
+        }
         return this
     }
 
-    fun unInject(clazz: Class<*>){
+    fun unInject(clazz: Class<*>) {
         clazzKeeper.remove(clazz)
     }
 
-    fun inject(lifecycleOwner : LifecycleOwner): PermissionInject {
-        if(lifeOwnerKeeper.contains(lifecycleOwner)) return this
-        lifeOwnerKeeper[lifecycleOwner] = Pair(true, findAnoInClass(lifecycleOwner::class.java))
-        lifecycleOwner.lifecycle.addObserver(object : LifeCompat() {
-            override fun destroy() {
-                lifeOwnerKeeper.remove(lifecycleOwner)
-            }
-        })
+    fun inject(lifecycleOwner: LifecycleOwner): PermissionInject {
+        if (lifeOwnerKeeper.contains(lifecycleOwner)) return this
+        findAnoInClass(lifecycleOwner::class.java)?.apply {
+            lifeOwnerKeeper[lifecycleOwner] = Pair(true, this)
+            lifecycleOwner.lifecycle.addObserver(object : LifeCompat() {
+                override fun destroy() {
+                    lifeOwnerKeeper.remove(lifecycleOwner)
+                }
+            })
+        }
         return this
     }
 
