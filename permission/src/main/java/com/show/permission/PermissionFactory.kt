@@ -2,6 +2,8 @@ package com.show.permission
 
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentManager
@@ -57,14 +59,30 @@ class PermissionFactory private constructor(
             return isAlwaysFalse(fragment.requireActivity(), *permissions)
         }
 
+        @RequiresApi(Build.VERSION_CODES.M)
+        @JvmStatic
+        fun checkPermissionIsAlwaysFalse(
+            fragment: Fragment,
+            permissions: String
+        ): Pair<String, Boolean> {
+            return isAlwaysFalseCheck(fragment.requireActivity(), permissions)
+        }
+
         private fun isAlwaysFalse(activity: FragmentActivity, vararg permissions: String): ArrayList<Pair<String, Boolean>> {
             val list = ArrayList<Pair<String, Boolean>>()
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 for (permission in permissions) {
-                    list.add(permission to activity.shouldShowRequestPermissionRationale(permission))
+                    list.add(isAlwaysFalseCheck(activity, permission))
                 }
             }
             return list
+        }
+
+
+        @RequiresApi(Build.VERSION_CODES.M)
+        private fun isAlwaysFalseCheck(activity: FragmentActivity, permission: String): Pair<String, Boolean> {
+            return permission to activity.shouldShowRequestPermissionRationale(permission)
+
         }
 
     }
@@ -84,7 +102,7 @@ class PermissionFactory private constructor(
                 return
             } else {
                 permissions.forEach {
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
                         && weakActivity?.get()
                             ?.checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED
                     ) {
