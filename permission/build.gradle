@@ -75,6 +75,7 @@ bintray {
     pkg {
         repo = 'Permission'
         name = 'Permission'
+        version("1.1.0")
         licenses = ['Apache-2.0']
         vcsUrl = 'https://github.com/ShowMeThe/Permission.git'
     }
@@ -89,11 +90,12 @@ afterEvaluate {
                 from components.release
                 groupId = 'com.github.ShowMeThe'
                 artifactId = 'permission'
-                version = '1.0.3'
+                version = '1.1.0'
             }
         }
     }
 }
+group='com.github.ShowMeThe'
 
 android {
     compileSdkVersion 30
@@ -103,7 +105,7 @@ android {
         minSdkVersion 21
         targetSdkVersion 30
         versionCode 1
-        versionName "1.0"
+        versionName "1.1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
