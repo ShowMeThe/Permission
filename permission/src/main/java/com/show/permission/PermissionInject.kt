@@ -9,7 +9,7 @@ import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.OnLifecycleEvent
 import java.lang.reflect.Method
-import java.util.HashMap
+import java.util.*
 
 /**
  * PackageName : com.show.permission
@@ -71,16 +71,26 @@ class PermissionInject {
         }
     }
 
+    private var lastResultMap: HashMap<String, Boolean>? = HashMap<String, Boolean>()
+    private var mVersion = 0
+
     /**
      * 放返回值为true时候，且该类未销毁不再接受收权限请求的通知，即消费完毕，且通知事件不是沾粘的
      */
     private fun pathResult(map: HashMap<String, Boolean>?) {
+        mVersion++
+        lastResultMap = map
         lifeOwnerKeeper.forEach { entry ->
-            val pair = entry.value
-            if (pair.result) {
-                val methodResult = pair.method?.invoke(entry.key, map)
-                if (methodResult != null && methodResult is Boolean && methodResult) {
-                    pair.result = false
+            /**
+             * LifeOwner State.STARTED 的内容才能收到
+             */
+            if (entry.key.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                val pair = entry.value
+                if (pair.result) {
+                    val methodResult = pair.method?.invoke(entry.key, map)
+                    if (methodResult != null && methodResult is Boolean && methodResult) {
+                        pair.result = false
+                    }
                 }
             }
         }
@@ -100,7 +110,7 @@ class PermissionInject {
     fun inject(clazz: Class<*>): PermissionInject {
         if (clazzKeeper.contains(clazz)) return this
         findAnoInClass(clazz::class.java)?.apply {
-            clazzKeeper[clazz] = Pair(true,this)
+            clazzKeeper[clazz] = Pair(true, this)
         }
         return this
     }
@@ -116,6 +126,18 @@ class PermissionInject {
             lifecycleOwner.lifecycle.addObserver(object : LifeCompat() {
                 override fun destroy() {
                     lifeOwnerKeeper.remove(lifecycleOwner)
+                }
+
+                override fun startIfPresent() {
+                    lifeOwnerKeeper[lifecycleOwner]?.also { pair ->
+                        if (pair.result && lastResultMap?.size!! > 0 && version < mVersion) {
+                            val methodResult = pair.method?.invoke(lifecycleOwner, lastResultMap)
+                            if (methodResult != null && methodResult is Boolean && methodResult) {
+                                pair.result = false
+                            }
+                            version++
+                        }
+                    }
                 }
             })
         }
@@ -139,11 +161,20 @@ class PermissionInject {
 
     abstract inner class LifeCompat : LifecycleObserver {
 
+        @OnLifecycleEvent(Lifecycle.Event.ON_START)
+        fun onStart() {
+            startIfPresent()
+        }
+
         @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         fun onDestroy() {
             destroy()
         }
 
         abstract fun destroy()
+
+        abstract fun startIfPresent()
+
+        var version = 0
     }
 }

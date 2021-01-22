@@ -26,9 +26,9 @@ class InjectActivity : AppCompatActivity() {
 
     @PermissionResult
     fun aPermission(map: HashMap<String, Boolean>):Boolean{
-        Log.e("222222222", "$map")
 
-        return true
+
+        return false
     }
 
 }

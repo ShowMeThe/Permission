@@ -75,7 +75,7 @@ bintray {
     pkg {
         repo = 'Permission'
         name = 'Permission'
-        version("1.1.0")
+        version("1.2.0")
         licenses = ['Apache-2.0']
         vcsUrl = 'https://github.com/ShowMeThe/Permission.git'
     }
@@ -90,7 +90,7 @@ afterEvaluate {
                 from components.release
                 groupId = 'com.github.ShowMeThe'
                 artifactId = 'permission'
-                version = '1.1.0'
+                version = '1.2.0'
             }
         }
     }
