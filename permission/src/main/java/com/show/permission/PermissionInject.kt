@@ -19,11 +19,16 @@ import java.util.*
 
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class PermissionResult()
+annotation class PermissionResult(val permissions: Array<out String> = [])
 
 class PermissionInject {
 
-    inner class Pair(var result: Boolean, var method: Method?)
+    inner class Pair(
+        var result: Boolean,
+        var method: Method?,
+        var permissions: Array<out String>? = null
+    )
+
 
     companion object {
         private val lifeOwnerKeeper = ArrayMap<LifecycleOwner, Pair>()
@@ -110,7 +115,7 @@ class PermissionInject {
     fun inject(clazz: Class<*>): PermissionInject {
         if (clazzKeeper.contains(clazz)) return this
         findAnoInClass(clazz::class.java)?.apply {
-            clazzKeeper[clazz] = Pair(true, this)
+            clazzKeeper[clazz] = this
         }
         return this
     }
@@ -122,7 +127,7 @@ class PermissionInject {
     fun inject(lifecycleOwner: LifecycleOwner): PermissionInject {
         if (lifeOwnerKeeper.contains(lifecycleOwner)) return this
         findAnoInClass(lifecycleOwner::class.java)?.apply {
-            lifeOwnerKeeper[lifecycleOwner] = Pair(true, this)
+            lifeOwnerKeeper[lifecycleOwner] = this
             lifecycleOwner.lifecycle.addObserver(object : LifeCompat() {
                 override fun destroy() {
                     lifeOwnerKeeper.remove(lifecycleOwner)
@@ -130,8 +135,11 @@ class PermissionInject {
 
                 override fun startIfPresent() {
                     lifeOwnerKeeper[lifecycleOwner]?.also { pair ->
-                        if (pair.result && lastResultMap?.size!! > 0 && version < mVersion) {
-                            val methodResult = pair.method?.invoke(lifecycleOwner, lastResultMap)
+                        if (pair.result && lastResultMap != null && lastResultMap?.size!! > 0 && version < mVersion) {
+                            val outPut = lastResultMap!!.filterKeys {
+                                pair.permissions?.contains(it) ?: true
+                            }
+                            val methodResult = pair.method?.invoke(lifecycleOwner, outPut)
                             if (methodResult != null && methodResult is Boolean && methodResult) {
                                 pair.result = false
                             }
@@ -145,12 +153,13 @@ class PermissionInject {
     }
 
 
-    private fun findAnoInClass(clazz: Class<*>): Method? {
+    private fun findAnoInClass(clazz: Class<*>): Pair? {
         try {
             for (method in clazz.methods) {
                 val isAnnotation = method.isAnnotationPresent(PermissionResult::class.java)
                 if (isAnnotation) {
-                    return method
+                    val annotation = method.getAnnotation(PermissionResult::class.java)
+                    return Pair(true, method, annotation?.permissions ?: emptyArray())
                 }
             }
         } catch (e: Exception) {
