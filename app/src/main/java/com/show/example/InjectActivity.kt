@@ -9,6 +9,7 @@ import com.show.permission.PermissionInject
 import com.show.permission.PermissionResult
 import kotlinx.android.synthetic.main.activity_inject.*
 import java.util.HashMap
+import java.util.jar.Manifest
 
 class InjectActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -24,11 +25,10 @@ class InjectActivity : AppCompatActivity() {
     }
 
 
-    @PermissionResult
+    @PermissionResult([android.Manifest.permission.WRITE_EXTERNAL_STORAGE])
     fun aPermission(map: HashMap<String, Boolean>):Boolean{
-
-
-        return false
+        Log.e("22222222222","$map")
+        return true
     }
 
 }
