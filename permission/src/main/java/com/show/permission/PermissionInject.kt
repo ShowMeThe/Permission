@@ -62,37 +62,40 @@ class PermissionInject {
 
     }
 
+    fun requestPermission(fragment: FragmentActivity, permissions: Array<out String>) {
+        PermissionFactory.with(fragment).request(*permissions) { _,grantedList,denyList ->
+            pathResult(grantedList,denyList)
+        }
+    }
 
     fun requestPermission(fragment: Fragment, permissions: Array<out String>) {
-        PermissionFactory.with(fragment).requestEach(*permissions) {
-            pathResult(it)
+        PermissionFactory.with(fragment).request(*permissions) { _,grantedList,denyList ->
+            pathResult(grantedList,denyList)
         }
     }
 
-
-    fun requestPermission(activity: FragmentActivity, permissions: Array<out String>) {
-        PermissionFactory.with(activity).requestEach(*permissions) {
-            pathResult(it)
-        }
-    }
-
-    private var lastResultMap: HashMap<String, Boolean>? = HashMap<String, Boolean>()
+    private var lastResultMap  = HashMap<String, Boolean>()
     private var mVersion = 0
 
     /**
      * 放返回值为true时候，且该类未销毁不再接受收权限请求的通知，即消费完毕，且通知事件不是沾粘的
      */
-    private fun pathResult(map: HashMap<String, Boolean>?) {
+    private fun pathResult(grantedList: MutableList<String>, denyList: MutableList<PermissionFactory.DenyResult>) {
         mVersion++
-        lastResultMap = map
         lifeOwnerKeeper.forEach { entry ->
             /**
              * LifeOwner State.STARTED 的内容才能收到
              */
+            grantedList.forEach {
+                lastResultMap[it] = true
+            }
+            denyList.forEach {
+                lastResultMap[it.permission] = false
+            }
             if (entry.key.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
                 val pair = entry.value
                 if (pair.result) {
-                    val methodResult = pair.method?.invoke(entry.key, map)
+                    val methodResult = pair.method?.invoke(entry.key, lastResultMap)
                     if (methodResult != null && methodResult is Boolean && methodResult) {
                         pair.result = false
                     }
@@ -103,7 +106,7 @@ class PermissionInject {
         clazzKeeper.forEach { entry ->
             val pair = entry.value
             if (pair.result) {
-                val methodResult = pair.method?.invoke(entry.key, map)
+                val methodResult = pair.method?.invoke(entry.key, lastResultMap)
                 if (methodResult != null && methodResult is Boolean && methodResult) {
                     pair.result = false
                 }
@@ -135,8 +138,8 @@ class PermissionInject {
 
                 override fun startIfPresent() {
                     lifeOwnerKeeper[lifecycleOwner]?.also { pair ->
-                        if (pair.result && lastResultMap != null && lastResultMap?.size!! > 0 && version < mVersion) {
-                            val outPut = lastResultMap!!.filterKeys {
+                        if (pair.result && lastResultMap.size > 0 && version < mVersion) {
+                            val outPut = lastResultMap.filterKeys {
                                 pair.permissions?.contains(it) ?: true
                             }
                             val methodResult = pair.method?.invoke(lifecycleOwner, outPut)

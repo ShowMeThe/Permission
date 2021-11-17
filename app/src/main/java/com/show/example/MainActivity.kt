@@ -20,12 +20,10 @@ class MainActivity : AppCompatActivity() {
 
 
         btn.setOnClickListener {
-            PermissionInject.with(this,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                Manifest.permission.RECORD_AUDIO,
-                Manifest.permission.CALL_PHONE,
-                Manifest.permission.CAMERA
-            )
+            PermissionInject.with(this,Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                    Manifest.permission.RECORD_AUDIO,
+                    Manifest.permission.CALL_PHONE,
+                    Manifest.permission.CAMERA)
         }
 
     }

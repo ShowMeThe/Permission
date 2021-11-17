@@ -27,7 +27,7 @@ class InjectActivity : AppCompatActivity() {
 
     @PermissionResult([android.Manifest.permission.WRITE_EXTERNAL_STORAGE])
     fun aPermission(map: HashMap<String, Boolean>):Boolean{
-        Log.e("22222222222","$map")
+        Log.e("222222","$map")
         return true
     }
 

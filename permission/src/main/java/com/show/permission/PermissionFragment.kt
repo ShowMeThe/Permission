@@ -1,6 +1,7 @@
 package com.show.permission
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -15,7 +16,7 @@ import java.util.HashMap
 * Author: ShowMeThe
 */
 
-class PermissionFragment : Fragment(), LifecycleObserver {
+class PermissionFragment : Fragment() {
 
     companion object{
 
@@ -30,24 +31,27 @@ class PermissionFragment : Fragment(), LifecycleObserver {
 
     private lateinit var permissions :Array<String>
     private val requestMultiple = ActivityResultContracts.RequestMultiplePermissions()
-
-
+    private val listener = LifecycleEventObserver{ source, event ->
+        if(event == Lifecycle.Event.ON_CREATE){
+            onStartPermission()
+        }
+    }
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
+    ): View {
         return View(context)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        lifecycle.addObserver(this)
+        lifecycle.addObserver(listener)
     }
 
 
-    @OnLifecycleEvent(Lifecycle.Event.ON_CREATE)
-    fun onStartPermission(){
+
+    private fun onStartPermission(){
         arguments?.apply {
             permissions = getStringArray("permissions")!!
         }
@@ -56,19 +60,19 @@ class PermissionFragment : Fragment(), LifecycleObserver {
                 onCallPermission?.invoke(HashMap(it))
             }.launch(permissions)
         }else{
-            onCallPermission?.invoke(null)
+            onCallPermission?.invoke(HashMap<String,Boolean>())
         }
     }
 
 
-    private var onCallPermission : ((result:HashMap<String,Boolean>?)->Unit)? = null
-    fun setOnCallPermissionResult(onCallPermission : ((result:HashMap<String,Boolean>?)->Unit)){
+    private var onCallPermission : ((result:HashMap<String,Boolean>)->Unit)? = null
+    fun setOnCallPermissionResult(onCallPermission : ((result:HashMap<String,Boolean>)->Unit)){
         this.onCallPermission = onCallPermission
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        lifecycle.removeObserver(this)
+        lifecycle.removeObserver(listener)
     }
 
 }
