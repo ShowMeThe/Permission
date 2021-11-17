@@ -1,18 +1,20 @@
 package com.show.permission
 
-import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentManager
-import androidx.lifecycle.*
-
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
+import java.lang.StringBuilder
 import java.lang.ref.WeakReference
-
-import java.util.ArrayList
-import java.util.HashMap
+import java.util.*
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
 
 /**
  * PackageName : com.show.permission
@@ -27,12 +29,22 @@ class PermissionFactory private constructor(
 
     companion object {
 
+
+        private val factoryStore = HashMap<LifecycleOwner, PermissionFactory>()
+
         @JvmStatic
         fun with(activity: FragmentActivity): PermissionFactory {
-            return PermissionFactory(
-                WeakReference(activity.supportFragmentManager),
-                WeakReference(activity)
-            )
+            var factory = factoryStore[activity]
+            return if (factory == null) {
+                factory = PermissionFactory(
+                    WeakReference(activity.supportFragmentManager),
+                    WeakReference(activity)
+                )
+                factoryStore[activity] = factory
+                factory
+            } else {
+                factory
+            }
         }
 
         @JvmStatic
@@ -79,7 +91,10 @@ class PermissionFactory private constructor(
             activity: FragmentActivity,
             permission: String
         ): DenyResult {
-            return DenyResult(activity.shouldShowRequestPermissionRationale(permission).not(),permission)
+            return DenyResult(
+                activity.shouldShowRequestPermissionRationale(permission).not(),
+                permission
+            )
         }
 
     }
@@ -89,10 +104,14 @@ class PermissionFactory private constructor(
     private val requestPermission = ArrayList<String>()
     private val alreadyGranted = ArrayList<String>()
     private var fragment: PermissionFragment? = null
-    data class DenyResult(var alwaysFalse:Boolean,val permission: String)
 
-    private val listener = LifecycleEventObserver{ source, event ->
-        if(event == Lifecycle.Event.ON_DESTROY){
+    data class DenyResult(var alwaysFalse: Boolean, val permission: String)
+
+    private val requestCallBack = HashMap<String,
+                (allGranted: Boolean, grantedList: MutableList<String>, denyList: MutableList<DenyResult>) -> Unit>()
+
+    private val listener = LifecycleEventObserver { source, event ->
+        if (event == Lifecycle.Event.ON_DESTROY) {
             clear()
         }
     }
@@ -101,31 +120,48 @@ class PermissionFactory private constructor(
         vararg permissions: String,
         result: (allGranted: Boolean, grantedList: MutableList<String>, denyList: MutableList<DenyResult>) -> Unit
     ) {
-        alreadyGranted.clear()
-        requestPermission.clear()
-        weakActivity?.get()?.lifecycle?.addObserver(listener)
-        weakReference?.get()?.apply {
-            if (permissions.isEmpty()) {
-                return
-            } else {
-                permissions.forEach {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
-                        && weakActivity?.get()
-                            ?.checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED
-                    ) {
-                        requestPermission.add(it)
-                    }else{
-                        alreadyGranted.add(it)
+        if (requestPermission.isEmpty()) {
+            alreadyGranted.clear()
+            requestPermission.clear()
+            weakActivity?.get()?.lifecycle?.addObserver(listener)
+            weakReference?.get()?.apply {
+                if (permissions.isEmpty()) {
+                    return
+                } else {
+                    permissions.forEach {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                            && weakActivity?.get()
+                                ?.checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED
+                        ) {
+                            requestPermission.add(it)
+                        } else {
+                            alreadyGranted.add(it)
+                        }
+                    }
+                    if (requestPermission.isNotEmpty()) {
+                        invoke(
+                            requestPermission.toArray(arrayOfNulls(requestPermission.size)),
+                            result
+                        )
+                    } else {
+                        result.invoke(true, permissions.toCollection(arrayListOf()), arrayListOf())
                     }
                 }
-                if (requestPermission.isNotEmpty()) {
-                    invoke(requestPermission.toArray(arrayOfNulls(requestPermission.size)), result)
-                } else {
-                    result.invoke(true, permissions.toCollection(arrayListOf()), arrayListOf())
-                }
             }
-
+        } else {
+            requestCallBack[permissions.toKey()] = result
         }
+    }
+
+    private fun Array<out String>.toKey() = run {
+        val key = StringBuilder()
+        forEach {
+            key.append(it).append(",")
+        }
+        if (key.isNotEmpty()) {
+            key.deleteAt(key.length - 1)
+        }
+        key.toString()
     }
 
 
@@ -158,20 +194,38 @@ class PermissionFactory private constructor(
                         grantedList.addAll(alreadyGranted)
                         result.invoke(allok, grantedList, denyList.map { permission ->
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                                isAlwaysFalseCheck(weakActivity?.get()!!,permission)
+                                isAlwaysFalseCheck(weakActivity?.get()!!, permission)
                             } else {
-                                DenyResult(false,permission)
+                                DenyResult(false, permission)
                             }
                         }.toMutableList())
                     }
                     beginTransaction().remove(fragment!!)
+
+                    alreadyGranted.clear()
+                    requestPermission.clear()
+
+                    /**
+                     * 处理等待任务
+                     */
+                    synchronized(requestCallBack) {
+                        if (requestCallBack.isNotEmpty()) {
+                            val key = requestCallBack.keys.last()
+                            val callback = requestCallBack[key]
+                            if (callback != null) {
+                                request(*key.split(",").toTypedArray(), result = callback)
+                                requestCallBack.remove(key)
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 
 
-    private fun clear(){
+    private fun clear() {
+        weakActivity?.get()?.apply { factoryStore.remove(this) }
         alreadyGranted.clear()
         requestPermission.clear()
         if (isAdded) {

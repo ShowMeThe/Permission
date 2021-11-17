@@ -1,16 +1,11 @@
 package com.show.example
 
 import android.Manifest
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.util.ArrayMap
 import android.util.Log
-import androidx.core.content.PermissionChecker
+import androidx.appcompat.app.AppCompatActivity
 import com.show.permission.PermissionFactory
-import com.show.permission.PermissionInject
-import com.show.permission.PermissionResult
 import kotlinx.android.synthetic.main.activity_main.*
-import java.util.HashMap
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -20,10 +15,25 @@ class MainActivity : AppCompatActivity() {
 
 
         btn.setOnClickListener {
-            PermissionInject.with(this,Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                    Manifest.permission.RECORD_AUDIO,
-                    Manifest.permission.CALL_PHONE,
-                    Manifest.permission.CAMERA)
+
+            PermissionFactory.with(this).request(Manifest.permission.WRITE_EXTERNAL_STORAGE,Manifest.permission.CAMERA
+            ){ allGranted, grantedList, denyList ->
+                Log.e("22222","111 $allGranted  ${grantedList} ${denyList}")
+            }
+
+            PermissionFactory.with(this).request(
+                Manifest.permission.CAMERA){ allGranted, grantedList, denyList ->
+                Log.e("22222","222 $allGranted  ${grantedList} ${denyList}")
+            }
+
+            PermissionFactory.with(this).request(
+                Manifest.permission.CALL_PHONE,Manifest.permission.WRITE_EXTERNAL_STORAGE){ allGranted, grantedList, denyList ->
+                Log.e("22222","333 $allGranted  ${grantedList} ${denyList}")
+            }
+            PermissionFactory.with(this).request(
+                Manifest.permission.RECORD_AUDIO,Manifest.permission.CALL_PHONE){ allGranted, grantedList, denyList ->
+                Log.e("22222","444 $allGranted  ${grantedList} ${denyList}")
+            }
         }
 
     }
