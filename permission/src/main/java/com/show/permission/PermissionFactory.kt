@@ -15,6 +15,7 @@ import java.lang.ref.WeakReference
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
+import kotlin.collections.LinkedHashMap
 
 /**
  * PackageName : com.show.permission
@@ -107,7 +108,7 @@ class PermissionFactory private constructor(
 
     data class DenyResult(var alwaysFalse: Boolean, val permission: String)
 
-    private val requestCallBack = HashMap<String,
+    private val requestCallBack = LinkedHashMap<String,
                 (allGranted: Boolean, grantedList: MutableList<String>, denyList: MutableList<DenyResult>) -> Unit>()
 
     private val listener = LifecycleEventObserver { source, event ->
@@ -210,7 +211,7 @@ class PermissionFactory private constructor(
                      */
                     synchronized(requestCallBack) {
                         if (requestCallBack.isNotEmpty()) {
-                            val key = requestCallBack.keys.last()
+                            val key = requestCallBack.keys.first()
                             val callback = requestCallBack[key]
                             if (callback != null) {
                                 request(*key.split(",").toTypedArray(), result = callback)

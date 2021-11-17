@@ -27,7 +27,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             PermissionFactory.with(this).request(
-                Manifest.permission.CALL_PHONE,Manifest.permission.WRITE_EXTERNAL_STORAGE){ allGranted, grantedList, denyList ->
+                Manifest.permission.CALL_PHONE,Manifest.permission.WRITE_EXTERNAL_STORAGE,Manifest.permission.READ_PHONE_STATE){ allGranted, grantedList, denyList ->
                 Log.e("22222","333 $allGranted  ${grantedList} ${denyList}")
             }
             PermissionFactory.with(this).request(
