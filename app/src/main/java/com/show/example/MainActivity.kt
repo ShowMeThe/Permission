@@ -15,25 +15,13 @@ class MainActivity : AppCompatActivity() {
 
 
         btn.setOnClickListener {
-
-            PermissionFactory.with(this).request(Manifest.permission.WRITE_EXTERNAL_STORAGE,Manifest.permission.CAMERA
+//            val dialog = CheckDialog()
+//            dialog.show(supportFragmentManager,"CheckDialog")
+            PermissionFactory.with(this).request(Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION,
             ){ allGranted, grantedList, denyList ->
                 Log.e("22222","111 $allGranted  ${grantedList} ${denyList}")
             }
 
-            PermissionFactory.with(this).request(
-                Manifest.permission.CAMERA){ allGranted, grantedList, denyList ->
-                Log.e("22222","222 $allGranted  ${grantedList} ${denyList}")
-            }
-
-            PermissionFactory.with(this).request(
-                Manifest.permission.CALL_PHONE,Manifest.permission.WRITE_EXTERNAL_STORAGE,Manifest.permission.READ_PHONE_STATE){ allGranted, grantedList, denyList ->
-                Log.e("22222","333 $allGranted  ${grantedList} ${denyList}")
-            }
-            PermissionFactory.with(this).request(
-                Manifest.permission.RECORD_AUDIO,Manifest.permission.CALL_PHONE){ allGranted, grantedList, denyList ->
-                Log.e("22222","444 $allGranted  ${grantedList} ${denyList}")
-            }
         }
 
     }

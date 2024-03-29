@@ -37,6 +37,7 @@ class PermissionFragment : Fragment() {
     private lateinit var permissions: Array<String>
     private val requestMultiple = ActivityResultContracts.RequestMultiplePermissions()
     private val register = registerForActivityResult(requestMultiple) {
+        Log.e("22222","$it")
         onCallPermission?.invoke(HashMap(it))
     }
     private val listener = LifecycleEventObserver { source, event ->

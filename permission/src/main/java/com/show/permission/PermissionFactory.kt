@@ -30,7 +30,7 @@ class PermissionFactory private constructor(
 
     companion object {
 
-
+        private const val FRAGMENT_ADD_TAG = "com.show.permission.PermissionFragment_Add"
         private val factoryStore = HashMap<LifecycleOwner, PermissionFactory>()
 
         @JvmStatic
@@ -106,6 +106,7 @@ class PermissionFactory private constructor(
     private val alreadyGranted = ArrayList<String>()
     private var fragment: PermissionFragment? = null
 
+
     data class DenyResult(var alwaysFalse: Boolean, val permission: String)
 
     private val requestCallBack = LinkedHashMap<String,
@@ -170,38 +171,41 @@ class PermissionFactory private constructor(
         permissions: Array<String>,
         result: (allGranted: Boolean, grantedList: MutableList<String>, denyList: MutableList<DenyResult>) -> Unit
     ) {
-        weakReference?.get()?.apply {
-            fragment = PermissionFragment.get(permissions)
-            beginTransaction()
-                .add(fragment!!, fragment!!::class.java.name)
-                .commitNow()
-            isAdded = true
-            fragment?.apply {
-                fragment?.setOnCallPermissionResult {
-                    if (it.isEmpty()) {
-                        result.invoke(true, it.keys.toMutableList(), arrayListOf())
-                    } else {
-                        var allok = true
-                        val denyList = arrayListOf<String>()
-                        val grantedList = arrayListOf<String>()
-                        for (entry in it.entries) {
-                            allok = allok && entry.value
-                            if (entry.value.not()) {
-                                denyList.add(entry.key)
-                            } else {
-                                grantedList.add(entry.key)
-                            }
+        val fragmentManager = weakReference?.get()
+        if (fragmentManager != null) {
+            val findFragment = fragmentManager.findFragmentByTag(FRAGMENT_ADD_TAG)
+            if (findFragment != null && fragmentManager.backStackEntryCount > 0) {
+                fragmentManager.popBackStack()
+            } else if (findFragment != null) {
+                fragmentManager.beginTransaction().remove(findFragment).commitNowAllowingStateLoss()
+            }
+            val permissionFragment = PermissionFragment.get(permissions)
+            fragmentManager
+                .beginTransaction().add(permissionFragment, FRAGMENT_ADD_TAG)
+                .commitNowAllowingStateLoss()
+            permissionFragment.setOnCallPermissionResult {
+                if (it.isEmpty()) {
+                    result.invoke(true, it.keys.toMutableList(), arrayListOf())
+                } else {
+                    var allok = true
+                    val denyList = arrayListOf<String>()
+                    val grantedList = arrayListOf<String>()
+                    for (entry in it.entries) {
+                        allok = allok && entry.value
+                        if (entry.value.not()) {
+                            denyList.add(entry.key)
+                        } else {
+                            grantedList.add(entry.key)
                         }
-                        grantedList.addAll(alreadyGranted)
-                        result.invoke(allok, grantedList, denyList.map { permission ->
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                                isAlwaysFalseCheck(weakActivity?.get()!!, permission)
-                            } else {
-                                DenyResult(false, permission)
-                            }
-                        }.toMutableList())
                     }
-                    beginTransaction().remove(fragment!!)
+                    grantedList.addAll(alreadyGranted)
+                    result.invoke(allok, grantedList, denyList.map { permission ->
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            isAlwaysFalseCheck(weakActivity?.get()!!, permission)
+                        } else {
+                            DenyResult(false, permission)
+                        }
+                    }.toMutableList())
 
                     alreadyGranted.clear()
                     requestPermission.clear()
@@ -220,7 +224,12 @@ class PermissionFactory private constructor(
                         }
                     }
                 }
+                fragmentManager.beginTransaction()
+                    .remove(permissionFragment)
+                    .commitAllowingStateLoss()
             }
+            isAdded = true
+            fragment = permissionFragment
         }
     }
 
@@ -229,9 +238,6 @@ class PermissionFactory private constructor(
         weakActivity?.get()?.apply { factoryStore.remove(this) }
         alreadyGranted.clear()
         requestPermission.clear()
-        if (isAdded) {
-            weakReference?.get()?.beginTransaction()?.remove(fragment!!)
-        }
         isAdded = false
         weakActivity?.get()?.lifecycle?.removeObserver(listener)
         weakReference = null
