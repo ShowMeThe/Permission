@@ -7,6 +7,7 @@ import android.util.Log
 import android.view.View
 import androidx.fragment.app.DialogFragment
 import com.show.permission.PermissionFactory
+import om.show.example.R
 
 class CheckDialog : DialogFragment() {
 
@@ -17,8 +18,9 @@ class CheckDialog : DialogFragment() {
         view.findViewById<View>(R.id.btn).setOnClickListener {
             PermissionFactory.with(this)
                 .request(
-                    Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION){ allGranted, grantedList, denyList ->
-                    Log.e("22222","onCreateDialog $allGranted  ${grantedList} ${denyList}")
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION){ allGranted, grantedList, denyList ->
+
                 }
         }
         return dialog

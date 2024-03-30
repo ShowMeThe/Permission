@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.OnLifecycleEvent
@@ -171,17 +172,16 @@ class PermissionInject {
         return null
     }
 
-    abstract inner class LifeCompat : LifecycleObserver {
+    abstract inner class LifeCompat : LifecycleEventObserver {
 
-        @OnLifecycleEvent(Lifecycle.Event.ON_START)
-        fun onStart() {
-            startIfPresent()
+        override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
+            if(event == Lifecycle.Event.ON_START){
+                startIfPresent()
+            }else if(event == Lifecycle.Event.ON_DESTROY){
+                destroy()
+            }
         }
 
-        @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
-        fun onDestroy() {
-            destroy()
-        }
 
         abstract fun destroy()
 

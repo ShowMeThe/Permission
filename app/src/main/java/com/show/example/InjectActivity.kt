@@ -1,15 +1,13 @@
 package com.show.example
 
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
-import com.show.permission.PermissionFactory
+import android.view.View
+import androidx.appcompat.app.AppCompatActivity
 import com.show.permission.PermissionInject
 import com.show.permission.PermissionResult
-import kotlinx.android.synthetic.main.activity_inject.*
-import java.util.HashMap
-import java.util.jar.Manifest
+import om.show.example.R
 
 class InjectActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -18,7 +16,7 @@ class InjectActivity : AppCompatActivity() {
 
         PermissionInject.inject(this)
 
-        btn.setOnClickListener {
+        findViewById<View>(R.id.btn).setOnClickListener {
             startActivity(Intent(this,MainActivity::class.java))
         }
 

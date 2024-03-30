@@ -1,17 +1,15 @@
 package com.show.permission
 
-import android.graphics.Color
+import android.Manifest
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.*
-import java.util.HashMap
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 
 /**
  * PackageName : com.show.permission
@@ -23,23 +21,44 @@ class PermissionFragment : Fragment() {
 
     companion object {
 
-        fun get(permissions: Array<out String>): PermissionFragment {
+        private const val EXTRA_PERMISSION = "permissions"
+
+
+
+        fun get(permissions: ArrayList<String>): PermissionFragment {
             val fragment = PermissionFragment()
             val bundle = Bundle()
-            bundle.putStringArray("permissions", permissions)
+            bundle.putStringArrayList(EXTRA_PERMISSION, permissions)
             fragment.arguments = bundle
             return fragment
         }
+
+
     }
 
 
-
-    private lateinit var permissions: Array<String>
-    private val requestMultiple = ActivityResultContracts.RequestMultiplePermissions()
+    private val finalRequestPermission = ArrayList<String>()
+    private val finalResultHash = HashMap<String, Boolean>()
+    private val requestMultiple = ActivityResultContracts.RequestPermission()
     private val register = registerForActivityResult(requestMultiple) {
-        Log.e("22222","$it")
-        onCallPermission?.invoke(HashMap(it))
+        launchNextOrOut(it)
+
     }
+
+    private fun launchNextOrOut(result: Boolean) {
+        if (finalRequestPermission.isNotEmpty()) {
+            val permission = finalRequestPermission.removeAt(0)
+            finalResultHash[permission] = result
+            if (finalRequestPermission.isNotEmpty()) {
+                register.launch(finalRequestPermission.first())
+            } else {
+                onCallPermission?.invoke(finalResultHash)
+            }
+        }
+
+    }
+
+
     private val listener = LifecycleEventObserver { source, event ->
         if (event == Lifecycle.Event.ON_CREATE) {
             onStartPermission()
@@ -62,15 +81,17 @@ class PermissionFragment : Fragment() {
 
 
     private fun onStartPermission() {
-        arguments?.apply {
-            permissions = getStringArray("permissions")!!
-        }
+        val permissions = requireArguments().getStringArrayList(EXTRA_PERMISSION) ?: return
         if (permissions.isNotEmpty()) {
-            register.launch(permissions)
+            finalRequestPermission.clear()
+            permissions.toCollection(finalRequestPermission)
+            val first = finalRequestPermission.first()
+            register.launch(first)
         } else {
-            onCallPermission?.invoke(HashMap<String, Boolean>())
+            onCallPermission?.invoke(HashMap())
         }
     }
+
 
 
     private var onCallPermission: ((result: HashMap<String, Boolean>) -> Unit)? = null
