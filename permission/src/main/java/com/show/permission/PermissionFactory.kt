@@ -193,7 +193,7 @@ class PermissionFactory private constructor(
         val permissionFragment = PermissionFragment.get(permissions)
         fragmentManager
             .beginTransaction().add(permissionFragment, FRAGMENT_ADD_TAG)
-            .commitNowAllowingStateLoss()
+            .commitAllowingStateLoss()
         permissionFragment.setOnCallPermissionResult {
             if (it.isEmpty()) {
                 result.invoke(true, arrayListOf(), arrayListOf())
@@ -211,8 +211,9 @@ class PermissionFactory private constructor(
                 }
                 grantedList.addAll(alreadyGranted)
                 result.invoke(allOk, grantedList, denyList.map { permission ->
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        isAlwaysFalseCheck(weakActivity?.get()!!, permission)
+                    val activity = weakActivity?.get()
+                    if (activity != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        isAlwaysFalseCheck(activity, permission)
                     } else {
                         DenyResult(false, permission)
                     }
@@ -237,7 +238,7 @@ class PermissionFactory private constructor(
             }
             fragmentManager.beginTransaction()
                 .remove(permissionFragment)
-                .commitAllowingStateLoss()
+                .commitNowAllowingStateLoss()
         }
         isAdded = true
     }
