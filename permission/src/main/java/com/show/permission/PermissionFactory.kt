@@ -185,9 +185,7 @@ class PermissionFactory private constructor(
     ) {
         val fragmentManager = weakReference?.get()?:return
         val findFragment = fragmentManager.findFragmentByTag(FRAGMENT_ADD_TAG)
-        if (findFragment != null && fragmentManager.backStackEntryCount > 0) {
-            fragmentManager.popBackStack()
-        } else if (findFragment != null) {
+       if (findFragment != null) {
             fragmentManager.beginTransaction().remove(findFragment).commitNowAllowingStateLoss()
         }
         val permissionFragment = PermissionFragment.get(permissions)
