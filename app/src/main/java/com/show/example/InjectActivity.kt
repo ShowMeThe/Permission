@@ -1,5 +1,6 @@
 package com.show.example
 
+import android.Manifest
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -17,7 +18,8 @@ class InjectActivity : AppCompatActivity() {
         PermissionInject.inject(this)
 
         findViewById<View>(R.id.btn).setOnClickListener {
-            startActivity(Intent(this,MainActivity::class.java))
+           // startActivity(Intent(this,MainActivity::class.java))
+           // PermissionInject.with(this, Manifest.permission.ACCESS_FINE_LOCATION)
         }
 
     }

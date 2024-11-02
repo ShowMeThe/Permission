@@ -4,6 +4,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
+import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentManager
@@ -24,16 +25,12 @@ import kotlin.collections.LinkedHashMap
  */
 
 class PermissionFactory private constructor(
-    private var weakReference: WeakReference<FragmentManager>? = null,
-    private var weakActivity: WeakReference<FragmentActivity>? = null
+    weakActivity: WeakReference<FragmentActivity>? = null
 ) {
 
     companion object {
-        private const val REQUEST_BACKGROUND_LOCATION =
-            "android.permission.ACCESS_BACKGROUND_LOCATION"
+        private const val REQUEST_BACKGROUND_LOCATION = "android.permission.ACCESS_BACKGROUND_LOCATION"
         private const val REQUEST_ACCESS_FINE_LOCATION = "android.permission.ACCESS_FINE_LOCATION"
-        private const val REQUEST_ACCESS_COARSE_LOCATION =
-            "android.permission.ACCESS_COARSE_LOCATION"
         private const val FRAGMENT_ADD_TAG = "com.show.permission.PermissionFragment_Add"
         private val factoryStore = HashMap<LifecycleOwner, PermissionFactory>()
 
@@ -42,7 +39,6 @@ class PermissionFactory private constructor(
             var factory = factoryStore[activity]
             return if (factory == null) {
                 factory = PermissionFactory(
-                    WeakReference(activity.supportFragmentManager),
                     WeakReference(activity)
                 )
                 factoryStore[activity] = factory
@@ -54,37 +50,43 @@ class PermissionFactory private constructor(
 
         @JvmStatic
         fun with(fragment: Fragment): PermissionFactory {
-            return PermissionFactory(
-                WeakReference(fragment.childFragmentManager),
-                WeakReference(fragment.requireActivity())
-            )
+            var factory = factoryStore[fragment]
+            return if (factory == null) {
+                factory = PermissionFactory(
+                    WeakReference(fragment.requireActivity())
+                )
+                factoryStore[fragment] = factory
+                factory
+            } else {
+                factory
+            }
         }
 
         @JvmStatic
-        fun checkPermissionIsAlwaysFalse(
+        fun shouldShowRequestPermissionRationale(
             activity: FragmentActivity,
             vararg permissions: String
         ): ArrayList<DenyResult> {
-            return isAlwaysFalse(activity, *permissions)
+            return shouldShowRequestPermissionsRationale(activity, *permissions)
         }
 
         @JvmStatic
-        fun checkPermissionsIsAlwaysFalse(
+        fun shouldShowRequestPermissionRationale(
             fragment: Fragment,
             vararg permissions: String
         ): ArrayList<DenyResult> {
-            return isAlwaysFalse(fragment.requireActivity(), *permissions)
+            return shouldShowRequestPermissionsRationale(fragment.requireActivity(), *permissions)
         }
 
 
-        private fun isAlwaysFalse(
+        private fun shouldShowRequestPermissionsRationale(
             activity: FragmentActivity,
             vararg permissions: String
         ): ArrayList<DenyResult> {
             val list = ArrayList<DenyResult>()
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 for (permission in permissions) {
-                    list.add(isAlwaysFalseCheck(activity, permission))
+                    list.add(shouldShowRequestPermissionRationale(activity, permission))
                 }
             }
             return list
@@ -92,12 +94,12 @@ class PermissionFactory private constructor(
 
 
         @RequiresApi(Build.VERSION_CODES.M)
-        private fun isAlwaysFalseCheck(
+        private fun shouldShowRequestPermissionRationale(
             activity: FragmentActivity,
             permission: String
         ): DenyResult {
             return DenyResult(
-                activity.shouldShowRequestPermissionRationale(permission).not(),
+                ActivityCompat.shouldShowRequestPermissionRationale(activity,permission),
                 permission
             )
         }
@@ -105,12 +107,12 @@ class PermissionFactory private constructor(
     }
 
 
-    private var isAdded = false
+    private var weakActivity = weakActivity
     private val requestPermission = ArrayList<String>()
     private val alreadyGranted = ArrayList<String>()
 
 
-    data class DenyResult(var alwaysFalse: Boolean, val permission: String)
+    data class DenyResult(var shouldShowRationale: Boolean, val permission: String)
 
     private val requestCallBack = LinkedHashMap<String,
                 (allGranted: Boolean, grantedList: MutableList<String>, denyList: MutableList<DenyResult>) -> Unit>()
@@ -183,16 +185,9 @@ class PermissionFactory private constructor(
         permissions: ArrayList<String>,
         result: (allGranted: Boolean, grantedList: MutableList<String>, denyList: MutableList<DenyResult>) -> Unit
     ) {
-        val fragmentManager = weakReference?.get()?:return
-        val findFragment = fragmentManager.findFragmentByTag(FRAGMENT_ADD_TAG)
-       if (findFragment != null) {
-            fragmentManager.beginTransaction().remove(findFragment).commitNowAllowingStateLoss()
-        }
-        val permissionFragment = PermissionFragment.get(permissions)
-        fragmentManager
-            .beginTransaction().add(permissionFragment, FRAGMENT_ADD_TAG)
-            .commitAllowingStateLoss()
-        permissionFragment.setOnCallPermissionResult {
+        val activity = this.weakActivity?.get() ?: return
+        val request = PermissionRequest.get(activity,permissions)
+        request.setOnCallPermissionResult {
             if (it.isEmpty()) {
                 result.invoke(true, arrayListOf(), arrayListOf())
             } else {
@@ -209,9 +204,8 @@ class PermissionFactory private constructor(
                 }
                 grantedList.addAll(alreadyGranted)
                 result.invoke(allOk, grantedList, denyList.map { permission ->
-                    val activity = weakActivity?.get()
-                    if (activity != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        isAlwaysFalseCheck(activity, permission)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        shouldShowRequestPermissionRationale(activity, permission)
                     } else {
                         DenyResult(false, permission)
                     }
@@ -234,21 +228,18 @@ class PermissionFactory private constructor(
                     }
                 }
             }
-            fragmentManager.beginTransaction()
-                .remove(permissionFragment)
-                .commitNowAllowingStateLoss()
         }
-        isAdded = true
+        request.startPermission()
     }
 
 
     private fun clear() {
-        weakActivity?.get()?.apply { factoryStore.remove(this) }
+        weakActivity?.get()?.apply {
+            factoryStore.remove(this)
+            lifecycle.removeObserver(listener)
+        }
         alreadyGranted.clear()
         requestPermission.clear()
-        isAdded = false
-        weakActivity?.get()?.lifecycle?.removeObserver(listener)
-        weakReference = null
     }
 
 

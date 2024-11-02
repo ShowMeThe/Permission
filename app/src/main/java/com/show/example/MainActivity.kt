@@ -18,8 +18,10 @@ class MainActivity : AppCompatActivity() {
 
 
         findViewById<View>(R.id.btn).setOnClickListener {
-            PermissionFactory.with(this).request(Manifest.permission.ACCESS_FINE_LOCATION,"12312"){ allGranted, grantedList, denyList ->
+            PermissionFactory.with(this)
+                .request(Manifest.permission.CAMERA,Manifest.permission.ACCESS_FINE_LOCATION){ allGranted, grantedList, denyList ->
                 Log.e("22222","$allGranted ${grantedList} ${denyList}")
+
             }
         }
 
